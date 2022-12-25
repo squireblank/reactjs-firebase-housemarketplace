@@ -14,10 +14,10 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Explore />} />
           <Route path="offers" element={<Offers />} />
-          <Route path="profile" element={<Profile />} />
+          <Route path="profile" element={<SignIn />} />
           <Route path="signin" element={<SignIn />} />
           <Route path="signup" element={<SignUp />} />
-          <Route path="forgetpassword" element={<ForgetPassword />} />
+          <Route path="forgotpassword" element={<ForgetPassword />} />
         </Route>
       </Routes>
     </>
