@@ -9,6 +9,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.config";
 import { ReactComponent as ArrowRightIcon } from "../assets/svg/arrowRightIcon.svg";
 import visibilityIcon from "../assets/svg/visibilityIcon.svg";
+import { toast } from "react-toastify";
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name || !email || !password) {
+      toast.warning("all fields are required");
       return console.log("all fields are required");
     }
     try {
@@ -46,9 +48,11 @@ const SignUp = () => {
         email,
         timestamp: serverTimestamp(),
       });
-      navigate("/profile");
+      navigate("/");
+      toast.success("new user created");
     } catch (error) {
       console.log(error.message);
+      toast.error(error.message);
     }
   };
 
