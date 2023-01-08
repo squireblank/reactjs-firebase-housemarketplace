@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ReactComponent as ArrowRightIcon } from "../assets/svg/arrowRightIcon.svg";
 import visibilityIcon from "../assets/svg/visibilityIcon.svg";
+import OAuth from "../components/OAuth";
 
 const SignIn = () => {
   const [formData, setFormData] = useState({
@@ -80,7 +81,8 @@ const SignIn = () => {
             </button>
           </div>
         </form>
-        {/* Google OAuth */}
+        {/* Goole OAuth integration */}
+        <OAuth />
         <Link to="/signup" className="registerLink">
           Sign Up
         </Link>
