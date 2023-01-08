@@ -1,7 +1,7 @@
 import { getAuth, updateProfile } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -24,7 +24,10 @@ const Profile = () => {
 
   // handle form data change
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    });
   };
 
   // handle form data update
