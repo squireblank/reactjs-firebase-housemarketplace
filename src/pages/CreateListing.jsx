@@ -2,6 +2,16 @@ import React, { useEffect, useRef, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import Spinner from "../components/Spinner";
+import { toast } from "react-toastify";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase.config";
+import { v4 as uuidv4 } from "uuid";
 
 const CreateListing = () => {
   const [geolocationEnabled, setGeolocationEnabled] = useState(false);
@@ -83,9 +93,114 @@ const CreateListing = () => {
   };
 
   // handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
+    setLoading(true);
+    // check for discounted price
+    if (discountedPrice >= regularPrice) {
+      toast.warning("Discounted price should be lower than regular price");
+      setLoading(false);
+      return;
+    }
+    // check for image number
+    if (images.length > 6) {
+      toast.warning("More than 6 images is not allowed");
+      setLoading(false);
+      return;
+    }
+    // create listing
+    const geolocation = {};
+    let location = "";
+    try {
+      // create geolocation and address
+      if (geolocationEnabled) {
+        // google geocoding api integration
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=YOUR_API_KEY`
+        );
+
+        const data = await response.data;
+        // console.log(data);
+        geolocation.lat = data.results[0]?.geomatry.location.lat ?? 0;
+        geolocation.lng = data.results[0]?.geomatry.location.lng ?? 0;
+        location =
+          data.status === "ZERO_RESULTS"
+            ? undefined
+            : data.results[0]?.formatted_address;
+        if (!location || location.includes("undefined")) {
+          toast.error("location not found");
+          return;
+        }
+      } else {
+        // manually set lat & lon for geolocation
+        geolocation.lat = latitude;
+        geolocation.lng = longitude;
+        location = address;
+      }
+      // create Promise (function) to upload images to firebase storage and get download Url
+      const storeImage = async (image) => {
+        return new Promise((resolve, reject) => {
+          const storage = getStorage();
+          const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
+          const storageRef = ref(storage, "images/" + fileName);
+          const uploadTask = uploadBytesResumable(storageRef, image);
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress =
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              console.log(`Upload done: ${progress}%`);
+              switch (snapshot.state) {
+                case "paused":
+                  console.log("upload paused");
+                  break;
+                case "running":
+                  console.log("upload running");
+                  break;
+                default:
+                  break;
+              }
+            },
+            (error) => {
+              reject(error);
+            },
+            () => {
+              getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                console.log("file available to download at", downloadURL);
+                resolve(downloadURL);
+              });
+            }
+          );
+        });
+      };
+      // execute and resolve promise
+      const imgUrls = await Promise.all(
+        [...images].map((image) => storeImage(image))
+      ).catch((error) => {
+        toast.error(error.message);
+        return;
+      });
+      // console.log(imgUrls);
+      //store data into firestore databse
+      const formDataCopy = {
+        ...formData,
+        imgUrls,
+        geolocation,
+        timestamp: serverTimestamp(),
+      };
+      delete formDataCopy.images;
+      delete formDataCopy.address;
+      location && (formDataCopy.location = location);
+      !formDataCopy.offer && delete formDataCopy.discountedPrice;
+      const docRef = await addDoc(collection(db, "listings"), formDataCopy);
+      setLoading(false);
+      toast.success("Listing created successfully");
+      navigate(`/category/${formDataCopy.type}/${docRef.id}`);
+    } catch (error) {
+      toast.error("could not add listing, internal server error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
